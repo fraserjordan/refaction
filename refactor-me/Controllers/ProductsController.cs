@@ -1,115 +1,125 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Web.Http;
-using refactor_me.Models;
+using refactor_me.ViewModels;
+using AutoMapper;
+using Service.Interfaces;
+using Service.Models;
+using Service.Services;
 
 namespace refactor_me.Controllers
 {
     [RoutePrefix("products")]
     public class ProductsController : ApiController
     {
-        [Route]
-        [HttpGet]
-        public Products GetAll()
+        private readonly IProductService _productService;
+        private readonly IProductOptionService _productOptionService;
+
+        public ProductsController(IProductService productService, IProductOptionService productOptionService)
         {
-            return new Products();
+            _productService = productService;
+            _productOptionService = productOptionService;
         }
 
         [Route]
         [HttpGet]
-        public Products SearchByName(string name)
+        public DataResponseModel GetAll()
         {
-            return new Products(name);
+            DataResponseModel model = _productService.GetAllProducts();
+            model.Data = Mapper.Map<List<ProductViewModel>>(model.Data);
+            return model;
+        }
+
+        [Route("search")]
+        [Route]
+        [HttpGet]
+        public DataResponseModel SearchByName(string name)
+        {
+            DataResponseModel model = _productService.SearchProducts(name);
+            model.Data = Mapper.Map<List<ProductViewModel>>(model.Data);
+            return model;
         }
 
         [Route("{id}")]
         [HttpGet]
-        public Product GetProduct(Guid id)
+        public DataResponseModel GetProduct(Guid id)
         {
-            var product = new Product(id);
-            if (product.IsNew)
-                throw new HttpResponseException(HttpStatusCode.NotFound);
-
-            return product;
+            DataResponseModel model = _productService.GetSingleProduct(id);
+            model.Data = Mapper.Map<ProductViewModel>(model.Data);
+            return model;
         }
 
         [Route]
         [HttpPost]
-        public void Create(Product product)
+        [Route("create")]
+        public DataResponseModel Create(ProductViewModel product)
         {
-            product.Save();
+            ProductServiceModel serviceModel = Mapper.Map<ProductServiceModel>(product);
+            DataResponseModel model = _productService.SaveProduct(serviceModel);
+            return model;
         }
 
-        [Route("{id}")]
+        [Route("update")]
         [HttpPut]
-        public void Update(Guid id, Product product)
+        public DataResponseModel Update(ProductViewModel product)
         {
-            var orig = new Product(id)
-            {
-                Name = product.Name,
-                Description = product.Description,
-                Price = product.Price,
-                DeliveryPrice = product.DeliveryPrice
-            };
-
-            if (!orig.IsNew)
-                orig.Save();
+            ProductServiceModel serviceModel = Mapper.Map<ProductServiceModel>(product);
+            DataResponseModel model = _productService.SaveProduct(serviceModel);
+            return model;
         }
 
-        [Route("{id}")]
+        [Route("delete/{id}")]
         [HttpDelete]
-        public void Delete(Guid id)
+        public DataResponseModel Delete(Guid id)
         {
-            var product = new Product(id);
-            product.Delete();
+            DataResponseModel model = _productService.DeleteProduct(id);
+            return model;
         }
 
-        [Route("{productId}/options")]
+        [Route("{id}/options")]
         [HttpGet]
-        public ProductOptions GetOptions(Guid productId)
+        public DataResponseModel GetOptions(Guid id)
         {
-            return new ProductOptions(productId);
+            DataResponseModel model = _productOptionService.GetProductOptionsForProduct(id);
+            model.Data = Mapper.Map<List<ProductOptionViewModel>>(model.Data);
+            return model;
         }
 
-        [Route("{productId}/options/{id}")]
+        [Route("options/{id}")]
         [HttpGet]
-        public ProductOption GetOption(Guid productId, Guid id)
+        public DataResponseModel GetOption(Guid id)
         {
-            var option = new ProductOption(id);
-            if (option.IsNew)
-                throw new HttpResponseException(HttpStatusCode.NotFound);
-
-            return option;
+            DataResponseModel model = _productOptionService.GetSingleProductOption(id);
+            model.Data = Mapper.Map<ProductOptionViewModel>(model.Data);
+            return model;
         }
 
-        [Route("{productId}/options")]
+        [Route("{id}/options/create")]
         [HttpPost]
-        public void CreateOption(Guid productId, ProductOption option)
+        public DataResponseModel CreateOption(Guid id, ProductOptionViewModel productOption)
         {
-            option.ProductId = productId;
-            option.Save();
+            productOption.ProductId = id;
+            ProductOptionServiceModel serviceModel = Mapper.Map<ProductOptionServiceModel>(productOption);
+            DataResponseModel model = _productOptionService.SaveProductOption(serviceModel);
+            return model;
         }
 
-        [Route("{productId}/options/{id}")]
+        [Route("options/update")]
         [HttpPut]
-        public void UpdateOption(Guid id, ProductOption option)
+        public DataResponseModel UpdateOption(ProductOptionViewModel productOption)
         {
-            var orig = new ProductOption(id)
-            {
-                Name = option.Name,
-                Description = option.Description
-            };
-
-            if (!orig.IsNew)
-                orig.Save();
+            ProductOptionServiceModel serviceModel = Mapper.Map<ProductOptionServiceModel>(productOption);
+            DataResponseModel model = _productOptionService.SaveProductOption(serviceModel);
+            return model;
         }
 
-        [Route("{productId}/options/{id}")]
+        [Route("options/delete/{id}")]
         [HttpDelete]
-        public void DeleteOption(Guid id)
+        public DataResponseModel DeleteOption(Guid id)
         {
-            var opt = new ProductOption(id);
-            opt.Delete();
+            DataResponseModel model = _productOptionService.DeleteProductOption(id);
+            return model;
         }
     }
 }
